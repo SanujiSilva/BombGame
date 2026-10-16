@@ -1,5 +1,9 @@
 # Boom Blocks — Netlify Multiplayer
 
+## Play solo
+
+Click **Play Solo vs Computer** on the start screen. You can enter a name or use the default. The game starts locally without a room code, another device, or an internet connection. Choose and confirm your secret bomb; the computer selects its own bomb and takes turns automatically. Scores and the first-to-10 match rule work the same way as multiplayer.
+
 The game supports two connection modes. This package includes a Metered Realtime publishable key, so moves and room presence travel through a managed WebSocket service. Players on different networks only need the same room code. If the key is removed, the game uses Trystero peer-to-peer connections, which can fail on restrictive networks.
 
 ## Enable play across networks

@@ -13,15 +13,16 @@ const source = html.match(/<script type="module">([\s\S]*?)<\/script>/)?.[1];
 assert.ok(source, 'Game script exists');
 const script = source.replace(/^import .*from .*;\s*/gm, '');
 const elements = new Map();
+const scheduled = [];
 const element = id => {
-  if (!elements.has(id)) elements.set(id, {value: '', textContent: '', className: '', disabled: false, style: {}, classList: {contains: () => false, add() {}, remove() {}}, replaceChildren() {}, append() {}, appendChild() {}, setAttribute() {}});
+  if (!elements.has(id)) elements.set(id, {value: '', textContent: '', className: '', disabled: false, style: {}, classList: {contains: () => false, add() {}, remove() {}, toggle() {}}, replaceChildren() {}, append() {}, appendChild() {}, setAttribute() {}});
   return elements.get(id);
 };
 const context = vm.createContext({
   METERED_KEY: '',
   document: {getElementById: element, querySelector: () => element('oplabel'), createElement: () => ({style: {}, classList: {add() {}}, append() {}, setAttribute() {}}), addEventListener() {}},
   window: {}, crypto: globalThis.crypto, navigator: {}, location: {reload() {}},
-  setTimeout: () => 1, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
+  setTimeout: fn => {scheduled.push(fn); return scheduled.length}, clearTimeout() {}, setInterval: () => 1, clearInterval() {},
 });
 vm.runInContext(script, context, {filename: 'index.html'});
 vm.runInContext(`
@@ -66,6 +67,26 @@ vm.runInContext(`
 assert.equal(vm.runInContext('state.players.A.score', context), 10);
 assert.equal(vm.runInContext('state.phase', context), 'end', 'first player to 10 ends the match');
 
+assert.match(html, /id="solo"[^>]*>Play Solo vs Computer/, 'lobby offers solo play');
+vm.runInContext(`
+  Math.random = () => 0.5;
+  document.getElementById('name').value = 'Alice';
+  startSolo();
+`, context);
+assert.equal(vm.runInContext('state.phase', context), 'setup');
+assert.equal(vm.runInContext('state.order.length', context), 2, 'solo creates a human and computer');
+assert.equal(vm.runInContext('state.players[BOT_ID].ready', context), true, 'computer locks its bomb');
+assert.equal(vm.runInContext('net', context), null, 'solo needs no room connection');
+vm.runInContext("selectedBomb=0;document.getElementById('action').onclick()", context);
+assert.equal(vm.runInContext('state.phase', context), 'play', 'solo round starts after human confirms');
+vm.runInContext("advanceMove(ident,1)", context);
+assert.equal(scheduled.length, 1, 'computer turn is scheduled');
+scheduled.shift()();
+assert.equal(vm.runInContext('state.used.length', context), 2, 'computer takes a turn');
+assert.equal(vm.runInContext('state.players[BOT_ID].score', context), 1, 'computer scores on a safe tile');
+vm.runInContext('nextRound()', context);
+assert.equal(vm.runInContext('state.players[BOT_ID].ready', context), true, 'computer is ready in the next round');
+
 // Exercise the actual room message handlers in two isolated browser contexts.
 const rooms = [];
 const pending = [];
@@ -73,7 +94,7 @@ const managedPeers = [];
 function client(id, managed = false) {
   const nodes = new Map();
   const node = key => {
-    if (!nodes.has(key)) nodes.set(key, {value: '', textContent: '', className: '', disabled: false, style: {}, classList: {contains: () => false, add() {}, remove() {}}, replaceChildren() {}, append() {}, appendChild() {}, setAttribute() {}});
+    if (!nodes.has(key)) nodes.set(key, {value: '', textContent: '', className: '', disabled: false, style: {}, classList: {contains: () => false, add() {}, remove() {}, toggle() {}}, replaceChildren() {}, append() {}, appendChild() {}, setAttribute() {}});
     return nodes.get(key);
   };
   const browser = vm.createContext({
