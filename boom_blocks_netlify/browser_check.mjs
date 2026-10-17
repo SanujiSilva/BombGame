@@ -68,7 +68,7 @@ try {
     if (i === 19) throw Error('Game script did not load in both contexts: ' + JSON.stringify(errors));
     await delay(1000);
   }
-  await evaluate(first, "document.getElementById('name').value='Alice';document.getElementById('capacity').value='2';document.getElementById('create').click()");
+  await evaluate(first, "document.getElementById('name').value='Alice';document.getElementById('name').dispatchEvent(new Event('input'));document.getElementById('create').click();document.getElementById('capacity').value='2';document.getElementById('enterCreated').click()");
   let code = '';
   for (let i = 0; i < 20; i++) {
     code = await evaluate(first, "document.getElementById('gamecode').value");
@@ -77,7 +77,7 @@ try {
     await delay(1000);
   }
   console.log('Code:', code);
-  await evaluate(second, `document.getElementById('name').value='Bob';document.getElementById('joincode').value=${JSON.stringify(code)};document.getElementById('join').click()`);
+  await evaluate(second, `document.getElementById('name').value='Bob';document.getElementById('name').dispatchEvent(new Event('input'));document.getElementById('joinMode').click();document.getElementById('joincode').value=${JSON.stringify(code)};document.getElementById('join').click()`);
   for (let i = 0; i < 20; i++) {
     await delay(1000);
     const a = await evaluate(first, "({joined:document.getElementById('roster-count').textContent,status:document.getElementById('gamestatus').textContent})");
